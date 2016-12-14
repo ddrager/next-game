@@ -8,6 +8,7 @@ searchIntent whats on {date}
 searchIntent games for {date}
 searchIntent tell me what game {date}
 searchIntent who plays on {date}
+searchIntent who plays in {date}
 searchIntent who plays {date}
 searchIntent what can I watch on {date}
 searchIntent on {date}
@@ -32,3 +33,7 @@ eventIntent number {number}
 eventIntent {number}
 eventIntent game {number}
 eventIntent more about {number}
+
+searchAgainIntent search again
+searchAgainIntent search
+searchAgainIntent again

@@ -24,7 +24,7 @@ var skillName = "Next Game:";
 var welcomeMessage = "You can ask for games today, search for games by date, or say help. What would you like to do? ";
 
 // Message for help intent
-var HelpMessage = "Here are some things you can say: Is there a game on December 25th? Who plays next week? Who plays tomorrow?";
+var HelpMessage = "Here are some things you can say: Is there a game on December 25th? Who plays next week? Who is playing on January Second?";
 
 var descriptionStateHelpMessage = "Here are some things you can say: Tell me about game one";
 
@@ -41,9 +41,9 @@ var oneEventMessage = "There is 1 game ";
 var multipleEventMessage = "There are %d games ";
 
 // text used after the number of events has been said
-var scheduledEventMessage = "scheduled for this time frame. I've sent the details to your Alexa app: ";
+var scheduledEventMessage = "scheduled for this time frame. ";
 
-var firstThreeMessage = "Here are the first %d. ";
+var firstThreeMessage = "Here are the first 3. ";
 
 // the values within the {} are swapped out for variables
 var eventSummary = "The %s event is, %s at %s on %s ";
@@ -52,7 +52,7 @@ var eventSummary = "The %s event is, %s at %s on %s ";
 var cardContentSummary = "%s at %s on %s ";
 
 // More info text
-var haveEventsRepromt = "Give me a game number to hear more information.";
+var haveEventsRepromt = "Give me a game number to hear more information, or say search again to search another date.";
 
 // Error if a date is out of range
 var dateOutOfRange = "Date is out of range please choose another date";
@@ -77,40 +77,108 @@ var output = "";
 // stores events that are found to be in our date range
 var relevantEvents = new Array();
 
+
+function searchIntent(parent) {
+    // Declare variables
+    var eventList = new Array();
+    var slotValue = parent.event.request.intent.slots.date.value;
+
+    var data = ical.parseFile(FILENAME);
+
+    // Loop through all iCal data found
+    for (var k in data) {
+        if (data.hasOwnProperty(k)) {
+            var ev = data[k]
+            // Pick out the data relevant to us and create an object to hold it.
+            var eventData = {
+                summary: removeTags(ev.summary),
+                location: removeTags(ev.location),
+                description: removeTags(ev.description),
+                location: removeTags(ev.location),
+                start: ev.start
+            };
+            // add the newly created object to an array for use later.
+            if (typeof(eventData.summary) !== 'undefined' && eventData.summary !== '') {
+                eventList.push(eventData);
+            }
+        }
+    }
+
+    // Check we have data
+    if (eventList.length > 0) {
+        // Read slot data and parse out a usable date
+        var eventDate = getDateFromSlot(slotValue);
+        // Check we have both a start and end date
+        if (eventDate.startDate && eventDate.endDate) {
+            // initiate a new array, and this time fill it with events that fit between the two dates
+            relevantEvents = getEventsBeweenDates(eventDate.startDate, eventDate.endDate, eventList);
+
+            if (relevantEvents.length > 0) {
+                // change state to description
+                parent.handler.state = states.DESCRIPTION;
+
+                // Create output for both Alexa and the content card
+                var cardContent = "";
+                output = oneEventMessage;
+                if (relevantEvents.length > 1) {
+                    output = utils.format(multipleEventMessage, relevantEvents.length);
+                }
+
+                output += scheduledEventMessage;
+
+                if (relevantEvents.length > 1) {
+                    output += utils.format(firstThreeMessage);
+                }
+
+                if (relevantEvents[0] != null) {
+                    var date = new Date(relevantEvents[0].start);
+                    output += utils.format(eventSummary, "First", removeTags(relevantEvents[0].summary), relevantEvents[0].location, date.toDateString() + ".");
+                }
+                if (relevantEvents[1]) {
+                    var date = new Date(relevantEvents[1].start);
+                    output += utils.format(eventSummary, "Second", removeTags(relevantEvents[1].summary), relevantEvents[1].location, date.toDateString() + ".");
+                }
+                if (relevantEvents[2]) {
+                    var date = new Date(relevantEvents[2].start);
+                    output += utils.format(eventSummary, "Third", removeTags(relevantEvents[2].summary), relevantEvents[2].location, date.toDateString() + ".");
+                }
+
+                for (var i = 0; i < relevantEvents.length; i++) {
+                    var date = new Date(relevantEvents[i].start);
+                    cardContent += utils.format(cardContentSummary, removeTags(relevantEvents[i].summary), removeTags(relevantEvents[i].location), date.toDateString()+ "\n\n");
+                }
+
+                output += eventNumberMoreInfoText;
+                alexa.emit(':askWithCard', output, haveEventsRepromt, cardTitle, cardContent);
+            } else {
+                output = NoDataMessage;
+                alexa.emit(':ask', output, output);
+            }
+        }
+        else {
+            output = NoDataMessage;
+            alexa.emit(':ask', output, output);
+        }
+    } else {
+        output = NoDataMessage;
+        alexa.emit(':ask', output, output);
+    }
+}
+
 // Adding session handlers
 var newSessionHandlers = {
     'LaunchRequest': function () {
         this.handler.state = states.SEARCHMODE;
         this.emit(':ask', skillName + " " + welcomeMessage, welcomeMessage);
     },
+    'searchIntent': function() {
+        this.handler.state = states.SEARCHMODE;
+        searchIntent(this);
+    },
     'Unhandled': function () {
-        this.emit(':ask', HelpMessage, HelpMessage);
+        this.emit(':ask', "That was unknown.", "That was really unknown.");
     },
 };
-
-var eventList = new Array();
-var data = ical.parseFile(FILENAME);
-
-// Loop through all iCal data found
-for (var k in data) {
-    if (data.hasOwnProperty(k)) {
-        var ev = data[k]
-        // Pick out the data relevant to us and create an object to hold it.
-        var eventData = {
-            summary: removeTags(ev.summary),
-            location: removeTags(ev.location),
-            description: removeTags(ev.description),
-            location: removeTags(ev.location),
-            start: ev.start
-        };
-        // add the newly created object to an array for use later.
-        if (typeof(eventData.summary) !== 'undefined' && eventData.summary !== '') {
-            console.log(eventData);
-            eventList.push(eventData);
-        }
-    }
-}
-
 
 // Create a new handler with a SEARCH state
 var startSearchHandlers = Alexa.CreateStateHandler(states.SEARCHMODE, {
@@ -127,92 +195,8 @@ var startSearchHandlers = Alexa.CreateStateHandler(states.SEARCHMODE, {
         this.emit(':ask', output, HelpMessage);
     },
 
-    'searchIntent': function () {
-        // Declare variables 
-        var eventList = new Array();
-        var slotValue = this.event.request.intent.slots.date.value;
-        var parent = this;
-
-        var data = ical.parseFile(FILENAME);
-
-        // Loop through all iCal data found
-        for (var k in data) {
-            if (data.hasOwnProperty(k)) {
-                var ev = data[k]
-                // Pick out the data relevant to us and create an object to hold it.
-                var eventData = {
-                    summary: removeTags(ev.summary),
-                    location: removeTags(ev.location),
-                    description: removeTags(ev.description),
-                    location: removeTags(ev.location),
-                    start: ev.start
-                };
-                // add the newly created object to an array for use later.
-                if (typeof(eventData.summary) !== 'undefined' && eventData.summary !== '') {
-                    eventList.push(eventData);
-                }
-            }
-        }
-
-        // Check we have data
-        if (eventList.length > 0) {
-            // Read slot data and parse out a usable date
-            var eventDate = getDateFromSlot(slotValue);
-            // Check we have both a start and end date
-            if (eventDate.startDate && eventDate.endDate) {
-                // initiate a new array, and this time fill it with events that fit between the two dates
-                relevantEvents = getEventsBeweenDates(eventDate.startDate, eventDate.endDate, eventList);
-
-                if (relevantEvents.length > 0) {
-                    // change state to description
-                    parent.handler.state = states.DESCRIPTION;
-
-                    // Create output for both Alexa and the content card
-                    var cardContent = "";
-                    output = oneEventMessage;
-                    if (relevantEvents.length > 1) {
-                        output = utils.format(multipleEventMessage, relevantEvents.length);
-                    }
-
-                    output += scheduledEventMessage;
-
-                    if (relevantEvents.length > 1) {
-                        output += utils.format(firstThreeMessage, relevantEvents.length);
-                    }
-
-                    if (relevantEvents[0] != null) {
-                        var date = new Date(relevantEvents[0].start);
-                        output += utils.format(eventSummary, "First", removeTags(relevantEvents[0].summary), relevantEvents[0].location, date.toDateString() + ".");
-                    }
-                    if (relevantEvents[1]) {
-                        var date = new Date(relevantEvents[1].start);
-                        output += utils.format(eventSummary, "Second", removeTags(relevantEvents[1].summary), relevantEvents[1].location, date.toDateString() + ".");
-                    }
-                    if (relevantEvents[2]) {
-                        var date = new Date(relevantEvents[2].start);
-                        output += utils.format(eventSummary, "Third", removeTags(relevantEvents[2].summary), relevantEvents[2].location, date.toDateString() + ".");
-                    }
-
-                    for (var i = 0; i < relevantEvents.length; i++) {
-                        var date = new Date(relevantEvents[i].start);
-                        cardContent += utils.format(cardContentSummary, removeTags(relevantEvents[i].summary), removeTags(relevantEvents[i].location), date.toDateString()+ "\n\n");
-                    }
-
-                    output += eventNumberMoreInfoText;
-                    alexa.emit(':askWithCard', output, haveEventsRepromt, cardTitle, cardContent);
-                } else {
-                    output = NoDataMessage;
-                    alexa.emit(':ask', output, output);
-                }
-            }
-            else {
-                output = NoDataMessage;
-                alexa.emit(':ask', output, output);
-            }
-        } else {
-            output = NoDataMessage;
-            alexa.emit(':ask', output, output);
-        }
+    'searchIntent': function() {
+        searchIntent(this);
     },
 
     'AMAZON.HelpIntent': function () {
@@ -262,19 +246,31 @@ var descriptionHandlers = Alexa.CreateStateHandler(states.DESCRIPTION, {
         }
     },
 
+    'searchIntent': function() {
+        searchIntent(this);
+    },
+
+    'searchAgainIntent': function() {
+        this.handler.state = states.SEARCHMODE;
+        alexa.emit(':ask', welcomeMessage, welcomeMessage);
+    },
+
     'AMAZON.HelpIntent': function () {
         this.emit(':ask', descriptionStateHelpMessage, descriptionStateHelpMessage);
     },
 
     'AMAZON.StopIntent': function () {
+        this.handler.state = states.SEARCHMODE;
         this.emit(':tell', killSkillMessage);
     },
 
     'AMAZON.CancelIntent': function () {
+        this.handler.state = states.SEARCHMODE;
         this.emit(':tell', killSkillMessage);
     },
 
     'AMAZON.NoIntent': function () {
+        this.handler.state = states.SEARCHMODE;
         this.emit(':tell', shutdownMessage);
     },
 
