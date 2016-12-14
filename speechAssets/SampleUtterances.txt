@@ -1,14 +1,34 @@
-searchIntent get me stuff happening {date}
-searchIntent get me events for {date}
+searchIntent get me games happening {date}
+searchIntent get me games happening on {date}
+searchIntent get me games for {date}
+searchIntent get me games on {date}
+searchIntent is there a game on {date}
+searchIntent is there a game {date}
 searchIntent whats on {date}
-searchIntent whats happening {date}
-searchIntent tell me whats happening {date}
-searchIntent what is happening {date}
-searchIntent what is happening on {date}
-searchIntent what events are happening {date}
-searchIntent what events are happening on {date}
+searchIntent games for {date}
+searchIntent tell me what game {date}
+searchIntent who plays on {date}
+searchIntent who plays {date}
+searchIntent what can I watch on {date}
+searchIntent on {date}
+searchIntent playing on {date}
+searchIntent scheduled for {date}
+searchIntent scheduled on {date}
+searchIntent when is next game on {date}
+searchIntent what bowl games are on {date}
+searchIntent what games are on {date}
+searchIntent what bowl games are {date}
+searchIntent games {date}
+searchIntent for games {date}
+searchIntent for games on {date}
+searchIntent for {date}
+searchIntent {date}
 
-eventIntent tell me about event {number}
-eventIntent whats event {number}
+
+eventIntent tell me about {number}
+eventIntent tell me about game {number}
+eventIntent whats {number}
 eventIntent number {number}
-
+eventIntent {number}
+eventIntent game {number}
+eventIntent more about {number}
