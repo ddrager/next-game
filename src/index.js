@@ -88,6 +88,30 @@ var newSessionHandlers = {
     },
 };
 
+var eventList = new Array();
+var data = ical.parseFile(FILENAME);
+
+// Loop through all iCal data found
+for (var k in data) {
+    if (data.hasOwnProperty(k)) {
+        var ev = data[k]
+        // Pick out the data relevant to us and create an object to hold it.
+        var eventData = {
+            summary: removeTags(ev.summary),
+            location: removeTags(ev.location),
+            description: removeTags(ev.description),
+            location: removeTags(ev.location),
+            start: ev.start
+        };
+        // add the newly created object to an array for use later.
+        if (typeof(eventData.summary) !== 'undefined' && eventData.summary !== '') {
+            console.log(eventData);
+            eventList.push(eventData);
+        }
+    }
+}
+
+
 // Create a new handler with a SEARCH state
 var startSearchHandlers = Alexa.CreateStateHandler(states.SEARCHMODE, {
     'AMAZON.YesIntent': function () {
@@ -120,10 +144,11 @@ var startSearchHandlers = Alexa.CreateStateHandler(states.SEARCHMODE, {
                     summary: removeTags(ev.summary),
                     location: removeTags(ev.location),
                     description: removeTags(ev.description),
+                    location: removeTags(ev.location),
                     start: ev.start
                 };
                 // add the newly created object to an array for use later.
-                if (typeof(eventList.summary) !== 'undefined' && eventList.summary !== '') {
+                if (typeof(eventData.summary) !== 'undefined' && eventData.summary !== '') {
                     eventList.push(eventData);
                 }
             }
@@ -224,10 +249,10 @@ var descriptionHandlers = Alexa.CreateStateHandler(states.DESCRIPTION, {
 
         if (relevantEvents[index]) {
 
-            if (relevantEvents[index].description !== '') {
-                output = descriptionMessage + removeTags(relevantEvents[index].summary) + ' on ' + removeTags(relevantEvents[index].description);
+            if (relevantEvents[index].location !== '') {
+                output = descriptionMessage + "The " + relevantEvents[index].description + ", " + relevantEvents[index].summary + ' playing on ' + relevantEvents[index].location;
             } else {
-                output = descriptionMessage + removeTags(relevantEvents[index].summary);
+                output = descriptionMessage + "The " + relevantEvents[index].description + ", " + relevantEvents[index].summary + relevantEvents[index].summary;
             }
             output += repromt;
 
@@ -269,9 +294,8 @@ var descriptionHandlers = Alexa.CreateStateHandler(states.DESCRIPTION, {
 
 // register handlers
 exports.handler = function (event, context, callback) {
-    console.log("Exporting alexa");
     alexa = Alexa.handler(event, context);
-    alexa.AppId = APP_ID;
+    alexa.appId = APP_ID;
     alexa.registerHandlers(newSessionHandlers, startSearchHandlers, descriptionHandlers);
     alexa.execute();
 };
@@ -372,7 +396,7 @@ var w2date = function (year, wn, dayNb) {
     return new Date(mon1 + ((wn - 1) * 7 + dayNb) * day);
 };
 
-// Loops though the events from the iCal data, and checks which ones are between our start data and out end date
+// Loops though the events from the iCal data, and checks which ones are between our start data and our end date
 function getEventsBeweenDates(startDate, endDate, eventList) {
 
     var start = new Date(startDate);
