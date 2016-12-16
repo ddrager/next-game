@@ -10,6 +10,7 @@ searchIntent tell me what game {date}
 searchIntent who plays on {date}
 searchIntent who plays in {date}
 searchIntent who plays {date}
+searchIntent who is playing on {date}
 searchIntent what can I watch on {date}
 searchIntent on {date}
 searchIntent playing on {date}
